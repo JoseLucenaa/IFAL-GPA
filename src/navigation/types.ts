@@ -3,6 +3,8 @@ import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { CompositeScreenProps, NavigatorScreenParams } from '@react-navigation/native';
 
 export type RootStackParamList = {
+  Login: undefined;
+  Register: undefined;
   MainTabs: NavigatorScreenParams<MainTabParamList>;
   ProjectDetail: { projectId: string };
 };

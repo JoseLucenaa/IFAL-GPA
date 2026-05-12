@@ -8,6 +8,7 @@ IFAL Projetos is an app for academic project management. Its principal purpose i
 
 The app is currently a mobile-first Expo/React Native prototype that implements the central workflow visually:
 
+- local login and registration
 - project overview
 - team visibility
 - project progress
@@ -16,9 +17,40 @@ The app is currently a mobile-first Expo/React Native prototype that implements 
 - Git repository link display
 - simulated AI report summary
 
-The broader product specification in `project.spec.md` describes a larger system with authentication, permissions, backend APIs, file storage, versioned uploads, comments, notifications, and real AI report generation. Those areas are not implemented yet.
+The broader product specification in `project.spec.md` describes a larger system with secure authentication, permissions, backend APIs, file storage, versioned uploads, comments, notifications, and real AI report generation. Several of those areas are still not implemented yet.
 
 ## Implemented App Areas
+
+### Authentication
+
+Files:
+
+- `src/context/AuthContext.tsx`
+- `src/screens/LoginScreen.tsx`
+- `src/screens/RegisterScreen.tsx`
+- `src/types/auth.ts`
+- `@react-native-async-storage/async-storage`
+
+The app now provides a prototype authentication flow:
+
+- login screen
+- registration screen
+- local cached session restore
+- local logout
+- user identity display on the home screen
+- role selection during registration
+
+User and session data are stored on-device with AsyncStorage:
+
+- `@ifal-gpa/auth/users`
+- `@ifal-gpa/auth/session`
+
+Current demo accounts:
+
+- `ana@ifal.edu.br` / `123456`
+- `helena@ifal.edu.br` / `123456`
+
+Important limitation: this is local prototype authentication. Passwords are stored in the local app cache for MVP demonstration only. Production authentication still needs a backend, secure password hashing, token/session handling, and role-based authorization.
 
 ### Home
 
@@ -29,10 +61,12 @@ The home screen provides a dashboard-style entry point:
 - IFAL Projetos hero area
 - total active project count
 - average project progress
+- signed-in user card
+- logout action
 - featured project card
 - shortcuts to repositories/projects and AI reports
 
-Data source: `ProjectsContext`.
+Data sources: `AuthContext` and `ProjectsContext`.
 
 ### Projects
 
@@ -95,10 +129,24 @@ Files:
 Navigation structure:
 
 - root native stack
+- unauthenticated stack for `Login` and `Register`
 - bottom tabs for `Home`, `Projects`, and `Insights`
 - project detail screen pushed from the stack
 
 ### State Management
+
+File: `src/context/AuthContext.tsx`
+
+The app uses React Context for authentication state.
+
+Current operations:
+
+- restore cached session
+- login
+- register
+- logout
+
+Auth data is persisted locally with AsyncStorage.
 
 File: `src/context/ProjectsContext.tsx`
 
@@ -141,14 +189,34 @@ Files:
 
 The app uses a small local design system with IFAL-oriented green colors, spacing tokens, typography, cards, buttons, progress bars, tabs, and task cards.
 
+### Tests
+
+Files:
+
+- `jest.config.js`
+- `jest.setup.ts`
+- `src/context/__tests__/AuthContext.test.tsx`
+
+The project now has a Jest environment using `jest-expo` and React Native Testing Library.
+
+Current test coverage focuses on the authentication feature:
+
+- initial unauthenticated state
+- local demo user seeding
+- login with cached demo user
+- invalid credential rejection
+- local user registration
+- cached session restore
+- logout and session removal
+
 ## Not Implemented Yet
 
 The following items are described in the spec but are not implemented in the app:
 
-- authentication
-- user registration
 - password recovery
 - role-based permissions
+- production authentication
+- secure password hashing
 - backend API
 - database persistence
 - file upload/storage
@@ -166,5 +234,4 @@ The following items are described in the spec but are not implemented in the app
 - notifications
 - audit/history logging
 - coordinator/admin views
-- tests
-
+- broader test coverage for screens, navigation, projects, Kanban, deliveries, Git, and reports

@@ -12,6 +12,7 @@ import {
   Fustat_700Bold,
 } from '@expo-google-fonts/fustat';
 import { RootNavigator } from './src/navigation/RootNavigator';
+import { AuthProvider } from './src/context/AuthContext';
 import { ProjectsProvider } from './src/context/ProjectsContext';
 import { colors } from './src/theme/colors';
 
@@ -38,10 +39,12 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <ProjectsProvider>
-          <StatusBar style="dark" />
-          <RootNavigator />
-        </ProjectsProvider>
+        <AuthProvider>
+          <ProjectsProvider>
+            <StatusBar style="dark" />
+            <RootNavigator />
+          </ProjectsProvider>
+        </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

@@ -1,10 +1,14 @@
 import React from 'react';
+import { ActivityIndicator, View } from 'react-native';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AppText } from '../components/AppText';
 import { colors } from '../theme/colors';
 import { MainTabs } from './MainTabs';
 import { ProjectDetailScreen } from '../screens/ProjectDetailScreen';
+import { LoginScreen } from '../screens/LoginScreen';
+import { RegisterScreen } from '../screens/RegisterScreen';
+import { useAuth } from '../context/AuthContext';
 import type { RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -22,6 +26,8 @@ const navTheme = {
 };
 
 export function RootNavigator() {
+  const { user, loading } = useAuth();
+
   return (
     <NavigationContainer theme={navTheme}>
       <Stack.Navigator
@@ -39,13 +45,32 @@ export function RootNavigator() {
           contentStyle: { backgroundColor: colors.surface },
         }}
       >
-        <Stack.Screen name="MainTabs" component={MainTabs} options={{ headerShown: false }} />
-        <Stack.Screen
-          name="ProjectDetail"
-          component={ProjectDetailScreen}
-          options={{ title: 'Projeto' }}
-        />
+        {loading ? (
+          <Stack.Screen name="Login" component={AuthLoadingScreen} options={{ headerShown: false }} />
+        ) : user ? (
+          <>
+            <Stack.Screen name="MainTabs" component={MainTabs} options={{ headerShown: false }} />
+            <Stack.Screen
+              name="ProjectDetail"
+              component={ProjectDetailScreen}
+              options={{ title: 'Projeto' }}
+            />
+          </>
+        ) : (
+          <>
+            <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false }} />
+          </>
+        )}
       </Stack.Navigator>
     </NavigationContainer>
+  );
+}
+
+function AuthLoadingScreen() {
+  return (
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface }}>
+      <ActivityIndicator color={colors.primary} />
+    </View>
   );
 }

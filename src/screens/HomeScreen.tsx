@@ -15,12 +15,14 @@ import { colors } from '../theme/colors';
 import { radius, spacing } from '../theme/spacing';
 import { textStyles } from '../theme/typography';
 import { useProjects } from '../context/ProjectsContext';
+import { useAuth } from '../context/AuthContext';
 import { useAppNavigation } from '../navigation/useAppNavigation';
 
 export function HomeScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useAppNavigation();
   const { projects } = useProjects();
+  const { user, logout } = useAuth();
 
   const active = projects.length;
   const avgProgress =
@@ -64,6 +66,32 @@ export function HomeScreen() {
             value={`${avgProgress}%`}
           />
         </View>
+
+        {user ? (
+          <Card style={styles.userCard}>
+            <View style={styles.userInfo}>
+              <View style={styles.userAvatar}>
+                <AppText weight="bold" style={styles.userAvatarText}>
+                  {initialsFromName(user.name)}
+                </AppText>
+              </View>
+              <View style={{ flex: 1 }}>
+                <AppText weight="bold" style={styles.userName} numberOfLines={1}>
+                  {user.name}
+                </AppText>
+                <AppText weight="medium" style={styles.userRole} numberOfLines={1}>
+                  {user.role}
+                </AppText>
+              </View>
+            </View>
+            <Pressable onPress={() => void logout()} style={styles.logoutButton}>
+              <Ionicons name="log-out-outline" size={18} color={colors.primary} />
+              <AppText weight="semibold" style={styles.logoutText}>
+                Sair
+              </AppText>
+            </Pressable>
+          </Card>
+        ) : null}
 
         <View style={styles.sectionHeader}>
           <AppText weight="bold" style={textStyles.title}>
@@ -146,6 +174,13 @@ export function HomeScreen() {
   );
 }
 
+function initialsFromName(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
 function MetricTile({
   icon,
   label,
@@ -214,6 +249,35 @@ const styles = StyleSheet.create({
   },
   metricValue: { fontSize: 22, color: colors.text },
   metricLabel: { fontSize: 12, color: colors.textMuted, marginTop: spacing.xs },
+  userCard: {
+    padding: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  userInfo: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, flex: 1 },
+  userAvatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  userAvatarText: { color: '#fff', fontSize: 13 },
+  userName: { fontSize: 15, color: colors.text },
+  userRole: { fontSize: 12, color: colors.textMuted, marginTop: spacing.xs },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.full,
+    backgroundColor: colors.primaryMuted,
+  },
+  logoutText: { color: colors.primary, fontSize: 13 },
   sectionHeader: { marginTop: spacing.sm },
   sectionHint: { ...textStyles.body, color: colors.textMuted, fontSize: 13, marginTop: spacing.xs },
   featuredCard: { padding: spacing.xl },
