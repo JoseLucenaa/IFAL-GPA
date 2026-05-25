@@ -2,6 +2,102 @@
 
 This file records project actions and feature work chronologically.
 
+## 2026-05-25 - Per-User Local Project Database
+
+Type: Fix
+
+Spec reference:
+
+- `project.spec.md` section 6.1 Cadastro e Autenticacao de Usuarios
+- `project.spec.md` section 6.2 Criacao de Projetos
+- `project.spec.md` section 13 MVP
+
+Summary:
+
+- Changed local project persistence from one shared project list to a per-user AsyncStorage database.
+- New registered accounts now start with an empty project list.
+- Added explicit student and professor test accounts.
+
+Files changed:
+
+- `src/context/AuthContext.tsx`
+- `src/context/ProjectsContext.tsx`
+- `src/context/__tests__/AuthContext.test.tsx`
+- `src/context/__tests__/ProjectsContext.test.tsx`
+- `docs/current-state.md`
+- `docs/architecture.md`
+- `docs/feature-log.md`
+
+User-facing behavior:
+
+- `student@test.ifal.edu.br` / `123456` and `professor@test.ifal.edu.br` / `123456` are available as test accounts.
+- New accounts no longer inherit sample projects.
+- Projects created in one account stay isolated from other accounts.
+
+Implementation notes:
+
+- Project data is stored under `@ifal-gpa/projects/by-user`, keyed by auth user id.
+- Known demo/test accounts are seeded from `seedProjects`; all other accounts start empty.
+
+Verification:
+
+- Ran `npm.cmd test -- --runInBand` successfully: 2 suites passed, 13 tests passed.
+- Ran `node_modules\.bin\tsc.cmd --noEmit` successfully.
+
+Known gaps:
+
+- This is still local prototype persistence, not a production database or backend authorization layer.
+
+## 2026-05-25 - Local MVP Project Workflows
+
+Type: Feature
+
+Spec reference:
+
+- `project.spec.md` sections 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 12, and 13
+
+Summary:
+
+- Expanded the local project domain model for member roles, richer tasks, delivery review status, multiple Git repositories, and AI report history.
+- Added AsyncStorage persistence for project state under `@ifal-gpa/projects`.
+- Added local MVP workflows for project creation, Kanban task creation/movement/deletion, delivery submission/review, repository validation/add/remove, and editable AI report generation.
+- Resolved the spec merge-conflict markers in favor of the mobile app direction.
+
+Files changed:
+
+- `project.spec.md`
+- `src/types/project.ts`
+- `src/context/ProjectsContext.tsx`
+- `src/data/seedProjects.ts`
+- `src/components/TaskCard.tsx`
+- `src/screens/ProjectsScreen.tsx`
+- `src/screens/ProjectDetailScreen.tsx`
+- `src/screens/InsightsScreen.tsx`
+- `src/context/__tests__/ProjectsContext.test.tsx`
+- `docs/current-state.md`
+- `docs/architecture.md`
+- `docs/feature-log.md`
+
+User-facing behavior:
+
+- Projects persist locally after reload.
+- New projects can capture course, semester, deadline data, team names, and an initial Git repository.
+- Project workspaces now support a four-column Kanban, task creation, task movement, task deletion, overdue highlighting, delivery version submission, delivery review, multiple repositories, and report history.
+
+Implementation notes:
+
+- The app remains a local Expo/React Native MVP with no backend, real file upload, real AI API, or document export yet.
+- Lightweight role behavior is limited to allowing professor/admin users to review deliveries in the UI.
+
+Verification:
+
+- Added context tests for project persistence, project creation, task mutations, delivery review, repository management, and report editing.
+- Automated verification requires dependency installation because `node_modules` is absent in this workspace.
+
+Known gaps:
+
+- No backend authentication, database, production storage, real AI integration, PDF/DOCX export, notifications, or coordinator/admin dashboards yet.
+
 ## 2026-05-11 - Initial App Prototype Reviewed
 
 Type: Documentation

@@ -6,7 +6,7 @@ import { colors } from '../theme/colors';
 import { radius, spacing } from '../theme/spacing';
 import { AppText } from './AppText';
 
-const columnsOrder: KanbanColumn[] = ['todo', 'doing', 'done'];
+const columnsOrder: KanbanColumn[] = ['todo', 'doing', 'review', 'done'];
 
 function nextColumn(current: KanbanColumn): KanbanColumn {
   const i = columnsOrder.indexOf(current);
@@ -22,12 +22,33 @@ type Props = {
 export function TaskCard({ task, onAdvance }: Props) {
   const next = nextColumn(task.column);
   const canAdvance = task.column !== 'done';
+  const overdue = Boolean(task.dueDate && new Date(task.dueDate) < new Date() && task.column !== 'done');
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, overdue && styles.overdueCard]}>
+      <View style={styles.metaRow}>
+        <View style={[styles.priorityPill, priorityStyle(task.priority)]}>
+          <AppText weight="semibold" style={styles.priorityText}>
+            {task.priority}
+          </AppText>
+        </View>
+        {overdue ? (
+          <View style={styles.overduePill}>
+            <AppText weight="semibold" style={styles.overdueText}>
+              Atrasada
+            </AppText>
+          </View>
+        ) : null}
+      </View>
+
       <AppText weight="semibold" style={styles.title} numberOfLines={3}>
         {task.title}
       </AppText>
+      {task.description ? (
+        <AppText weight="regular" style={styles.description} numberOfLines={3}>
+          {task.description}
+        </AppText>
+      ) : null}
       {task.dueLabel ? (
         <AppText weight="medium" style={styles.due}>
           {task.dueLabel}
@@ -37,7 +58,7 @@ export function TaskCard({ task, onAdvance }: Props) {
         <Pressable
           onPress={() => onAdvance(task.id, next)}
           style={styles.advance}
-          accessibilityLabel="Avançar tarefa no quadro"
+          accessibilityLabel="Avancar tarefa no quadro"
         >
           <AppText weight="semibold" style={styles.advanceText}>
             Mover para {labelFor(next)}
@@ -52,7 +73,15 @@ export function TaskCard({ task, onAdvance }: Props) {
 function labelFor(col: KanbanColumn): string {
   if (col === 'todo') return 'A fazer';
   if (col === 'doing') return 'Em progresso';
-  return 'Concluído';
+  if (col === 'review') return 'Em revisao';
+  return 'Concluido';
+}
+
+function priorityStyle(priority: Task['priority']) {
+  if (priority === 'Critica') return { backgroundColor: '#FEE4E2' };
+  if (priority === 'Alta') return { backgroundColor: '#FEF0C7' };
+  if (priority === 'Media') return { backgroundColor: colors.primaryMuted };
+  return { backgroundColor: colors.surface };
 }
 
 const styles = StyleSheet.create({
@@ -64,7 +93,25 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     gap: spacing.xs,
   },
+  overdueCard: { borderColor: colors.danger },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' },
+  priorityPill: {
+    alignSelf: 'flex-start',
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+  },
+  priorityText: { fontSize: 11, color: colors.textSecondary },
+  overduePill: {
+    alignSelf: 'flex-start',
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    backgroundColor: '#FEE4E2',
+  },
+  overdueText: { fontSize: 11, color: colors.danger },
   title: { fontSize: 14, color: colors.text },
+  description: { fontSize: 12, color: colors.textSecondary, lineHeight: 17 },
   due: { fontSize: 12, color: colors.textMuted, marginTop: spacing.xs },
   advance: {
     marginTop: spacing.sm,

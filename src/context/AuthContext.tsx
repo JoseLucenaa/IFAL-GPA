@@ -35,6 +35,26 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 const seedUsers: StoredUser[] = [
   {
+    id: 'u_test_student',
+    name: 'Teste Estudante',
+    email: 'student@test.ifal.edu.br',
+    password: '123456',
+    role: 'Estudante',
+    course: 'Analise e Desenvolvimento de Sistemas',
+    registration: '20269901',
+    createdAt: '2026-05-25T00:00:00.000Z',
+  },
+  {
+    id: 'u_test_professor',
+    name: 'Teste Professor',
+    email: 'professor@test.ifal.edu.br',
+    password: '123456',
+    role: 'Professor orientador',
+    course: 'Analise e Desenvolvimento de Sistemas',
+    registration: 'SIAPE-9991',
+    createdAt: '2026-05-25T00:00:00.000Z',
+  },
+  {
     id: 'u_demo_student',
     name: 'Ana Souza',
     email: 'ana@ifal.edu.br',

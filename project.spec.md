@@ -2,11 +2,7 @@
 
 ## 1. Visão Geral
 
-<<<<<<< HEAD
-O IFAL Projetos é uma plataforma web voltada para o gerenciamento de projetos acadêmicos, como Projetos Integradores, Trabalhos de Conclusão de Curso e projetos de pesquisa/extensão.
-=======
 O IFAL Projetos é um aplicativo voltado para o gerenciamento de projetos acadêmicos, como Projetos Integradores, Trabalhos de Conclusão de Curso e projetos de pesquisa/extensão.
->>>>>>> 5fbd74ee84e62ff7ab729887ca02677ca573e0c5
 
 O sistema tem como objetivo melhorar a organização, o acompanhamento e a documentação de projetos longos desenvolvidos por estudantes, professores orientadores e coordenadores acadêmicos.
 
@@ -30,15 +26,9 @@ Isso gera problemas como:
 
 ## 3. Proposta de Valor
 
-<<<<<<< HEAD
-O IFAL Projetos centraliza o gerenciamento de projetos acadêmicos em uma única plataforma, permitindo que equipes, orientadores e coordenadores acompanhem o progresso dos trabalhos de forma organizada, transparente e eficiente.
-
-A plataforma oferece criação de projetos com equipes, quadro Kanban, controle de versões de entregas, integração com repositórios Git e geração automática de relatórios com apoio de IA.
-=======
 O IFAL Projetos centraliza o gerenciamento de projetos acadêmicos em um único aplicativo, permitindo que equipes, orientadores e coordenadores acompanhem o progresso dos trabalhos de forma organizada, transparente e eficiente.
 
 O aplicativo oferece criação de projetos com equipes, quadro Kanban, controle de versões de entregas, integração com repositórios Git e geração automática de relatórios com apoio de IA.
->>>>>>> 5fbd74ee84e62ff7ab729887ca02677ca573e0c5
 
 ---
 
@@ -64,11 +54,7 @@ O aplicativo oferece criação de projetos com equipes, quadro Kanban, controle 
 
 ### Objetivo geral
 
-<<<<<<< HEAD
-Criar uma plataforma para organizar, acompanhar e documentar projetos acadêmicos de longa duração.
-=======
 Criar um aplicativo para organizar, acompanhar e documentar projetos acadêmicos de longa duração.
->>>>>>> 5fbd74ee84e62ff7ab729887ca02677ca573e0c5
 
 ### Objetivos específicos
 
@@ -89,11 +75,7 @@ Criar um aplicativo para organizar, acompanhar e documentar projetos acadêmicos
 
 ### Descrição
 
-<<<<<<< HEAD
-O sistema deve permitir que usuários acessem a plataforma por meio de login seguro.
-=======
 O sistema deve permitir que usuários acessem o aplicativo por meio de login seguro.
->>>>>>> 5fbd74ee84e62ff7ab729887ca02677ca573e0c5
 
 ### Requisitos
 
@@ -456,23 +438,15 @@ O sistema deve enviar notificações sobre eventos importantes do projeto.
 
 ## 7.2 Usabilidade
 
-<<<<<<< HEAD
-- Interface simples e responsiva
-- Compatível com desktop, tablet e celular
-=======
 - Interface simples, responsiva e otimizada para uso móvel
 - Compatível com smartphones e tablets, com possibilidade de execução web quando suportada pela tecnologia escolhida
->>>>>>> 5fbd74ee84e62ff7ab729887ca02677ca573e0c5
 - Navegação clara entre projetos, tarefas e entregas
 - Dashboard visual e fácil de entender
 
 ## 7.3 Desempenho
 
-<<<<<<< HEAD
 - O sistema deve carregar páginas principais em até 3 segundos em condições normais
-=======
 - O sistema deve carregar telas principais em até 3 segundos em condições normais
->>>>>>> 5fbd74ee84e62ff7ab729887ca02677ca573e0c5
 - O Kanban deve atualizar alterações de forma rápida
 - Consultas ao banco devem ser otimizadas
 
@@ -483,12 +457,8 @@ O sistema deve enviar notificações sobre eventos importantes do projeto.
 
 ## 7.5 Disponibilidade
 
-<<<<<<< HEAD
-- O sistema deve estar disponível para acesso web
-=======
 - O sistema deve estar disponível como aplicativo para dispositivos móveis
 - Quando houver versão web complementar, ela deve manter os mesmos dados e permissões da versão móvel
->>>>>>> 5fbd74ee84e62ff7ab729887ca02677ca573e0c5
 - Deve possuir rotina de backup dos dados
 - Deve registrar logs de erros e operações importantes
 
@@ -620,11 +590,7 @@ Atributos:
 
 ## 10.1 Fluxo de Criação de Projeto
 
-<<<<<<< HEAD
-1. Usuário acessa a plataforma
-=======
 1. Usuário acessa o aplicativo
->>>>>>> 5fbd74ee84e62ff7ab729887ca02677ca573e0c5
 2. Usuário cria um novo projeto
 3. Informa título, descrição, tipo, curso e prazo
 4. Adiciona membros da equipe
@@ -696,11 +662,7 @@ Atributos:
 - O sistema gera relatórios automáticos com apoio de IA
 - O sistema possui dashboard com indicadores principais
 - O sistema respeita permissões por perfil de usuário
-<<<<<<< HEAD
-- O sistema é responsivo e acessível por navegador web
-=======
 - O sistema é responsivo e acessível em dispositivos móveis
->>>>>>> 5fbd74ee84e62ff7ab729887ca02677ca573e0c5
 
 ---
 
@@ -736,13 +698,6 @@ A primeira versão do sistema deve conter:
 
 ## 15. Tecnologias Sugeridas
 
-<<<<<<< HEAD
-### Front-end
-
-- React
-- Next.js
-- Tailwind CSS
-=======
 ### Aplicativo
 
 - React Native
@@ -754,7 +709,6 @@ A primeira versão do sistema deve conter:
 
 - React ou Next.js
 - Tailwind CSS ou biblioteca de componentes compatível com a identidade visual
->>>>>>> 5fbd74ee84e62ff7ab729887ca02677ca573e0c5
 
 ### Back-end
 
@@ -906,11 +860,7 @@ A primeira versão do sistema deve conter:
 
 ## 20. Resumo Executivo
 
-<<<<<<< HEAD
-O IFAL Projetos é uma plataforma acadêmica para organizar e acompanhar projetos integradores, TCCs e outros trabalhos de longa duração.
-=======
 O IFAL Projetos é um aplicativo acadêmico para organizar e acompanhar projetos integradores, TCCs e outros trabalhos de longa duração.
->>>>>>> 5fbd74ee84e62ff7ab729887ca02677ca573e0c5
 
 A solução centraliza equipe, tarefas, entregas, versões, repositórios Git e relatórios em um único ambiente. Com o apoio de IA, o sistema facilita a geração de relatórios e melhora a comunicação entre estudantes, orientadores e coordenações.
 

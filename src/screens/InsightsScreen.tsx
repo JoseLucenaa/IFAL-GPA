@@ -16,16 +16,16 @@ export function InsightsScreen() {
   const navigation = useAppNavigation();
   const { projects } = useProjects();
 
-  const withReports = projects.filter((p) => (p.lastReportSummary?.length ?? 0) > 0);
+  const withReports = projects.filter((p) => p.reports.length > 0 || (p.lastReportSummary?.length ?? 0) > 0);
 
   return (
     <View style={[styles.root, { paddingTop: insets.top + spacing.md }]}>
       <View style={styles.header}>
         <AppText weight="bold" style={textStyles.title}>
-          Relatórios com IA
+          Relatorios com IA
         </AppText>
         <AppText weight="regular" style={styles.subtitle}>
-          Geração automática de resumos de status, riscos e próximos passos — integrado a cada projeto.
+          Historico local de sinteses geradas a partir de tarefas, entregas e repositorios.
         </AppText>
       </View>
 
@@ -40,14 +40,14 @@ export function InsightsScreen() {
               Sem projetos para analisar
             </AppText>
             <AppText weight="regular" style={styles.emptyBody}>
-              Cadastre um projeto na aba Projetos para habilitar relatórios automáticos.
+              Cadastre um projeto na aba Projetos para habilitar relatorios automaticos.
             </AppText>
           </Card>
         }
         renderItem={({ item }) => (
           <InsightCard
             project={item}
-            placeholder={!item.lastReportSummary}
+            placeholder={!item.reports.length && !item.lastReportSummary}
             onOpen={() => navigation.navigate('ProjectDetail', { projectId: item.id })}
           />
         )}
@@ -65,6 +65,8 @@ function InsightCard({
   placeholder: boolean;
   onOpen: () => void;
 }) {
+  const latest = project.reports[0];
+
   return (
     <Card style={styles.card}>
       <View style={styles.cardTop}>
@@ -76,7 +78,7 @@ function InsightCard({
             {project.title}
           </AppText>
           <AppText weight="medium" style={styles.cardKind}>
-            {project.kind}
+            {latest ? latest.type : project.kind}
           </AppText>
         </View>
       </View>
@@ -84,13 +86,13 @@ function InsightCard({
       <View style={styles.quote}>
         <AppText weight="regular" style={styles.quoteText}>
           {placeholder
-            ? 'Nenhum relatório gerado ainda. Abra o projeto e use “Gerar relatório” para criar o primeiro resumo com IA.'
-            : project.lastReportSummary}
+            ? 'Nenhum relatorio gerado ainda. Abra o projeto e use Gerar relatorio para criar a primeira sintese.'
+            : latest?.content ?? project.lastReportSummary}
         </AppText>
       </View>
 
       <AppText weight="semibold" style={styles.link} onPress={onOpen}>
-        Abrir workspace do projeto →
+        Abrir workspace do projeto {'->'}
       </AppText>
     </Card>
   );

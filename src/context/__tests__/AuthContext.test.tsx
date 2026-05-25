@@ -51,6 +51,8 @@ describe('AuthContext', () => {
 
     const usersRaw = await AsyncStorage.getItem(USERS_KEY);
     expect(usersRaw).not.toBeNull();
+    expect(usersRaw).toContain('student@test.ifal.edu.br');
+    expect(usersRaw).toContain('professor@test.ifal.edu.br');
     expect(usersRaw).toContain('ana@ifal.edu.br');
     expect(usersRaw).toContain('helena@ifal.edu.br');
   });

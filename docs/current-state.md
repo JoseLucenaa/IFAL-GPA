@@ -1,6 +1,6 @@
 # Current State
 
-Last reviewed: 2026-05-11
+Last reviewed: 2026-05-25
 
 ## Product Intent
 
@@ -9,13 +9,13 @@ IFAL Projetos is an app for academic project management. Its principal purpose i
 The app is currently a mobile-first Expo/React Native prototype that implements the central workflow visually:
 
 - local login and registration
-- project overview
+- persisted project overview
 - team visibility
 - project progress
-- simple Kanban tracking
-- delivery/version history display
-- Git repository link display
-- simulated AI report summary
+- Kanban task creation, movement, deletion, and overdue highlighting
+- delivery/version submission and local review status
+- multiple Git repository link display and validation
+- simulated editable AI report history
 
 The broader product specification in `project.spec.md` describes a larger system with secure authentication, permissions, backend APIs, file storage, versioned uploads, comments, notifications, and real AI report generation. Several of those areas are still not implemented yet.
 
@@ -47,6 +47,8 @@ User and session data are stored on-device with AsyncStorage:
 
 Current demo accounts:
 
+- `student@test.ifal.edu.br` / `123456`
+- `professor@test.ifal.edu.br` / `123456`
 - `ana@ifal.edu.br` / `123456`
 - `helena@ifal.edu.br` / `123456`
 
@@ -78,16 +80,19 @@ The projects screen provides:
 - project cards with kind, title, description, progress, member count, and deadline
 - modal for creating a basic project
 
-Current project creation is local and in-memory only. It supports:
+Current project creation is local and persisted with AsyncStorage. It supports:
 
 - title
 - short description
-- project kind: `Projeto Integrador` or `TCC`
+- project kind: `Projeto Integrador`, `TCC`, `Pesquisa`, `Extensao`, or `Outro`
+- course
+- semester
 - main deadline label
-- Git URL
+- optional deadline date
+- optional first Git URL
 - comma-separated team member names
 
-There is no persistence after app reload.
+Projects are stored per user under `@ifal-gpa/projects/by-user`. Seed/demo accounts receive sample projects; newly registered accounts start with an empty project list.
 
 ### Project Detail
 
@@ -105,11 +110,12 @@ Implemented behavior:
 
 - overview card with kind, title, deadline, description, and progress
 - team grid with generated initials
-- Kanban board grouped into `todo`, `doing`, and `done`
-- task movement only moves forward through the columns
-- deliveries are displayed as a read-only version history
-- Git panel opens the configured repository URL
-- AI panel simulates report generation with a local mock summary
+- Kanban board grouped into `todo`, `doing`, `review`, and `done`
+- task creation, movement, deletion, priority display, and overdue highlighting
+- deliveries can be registered as new local versions
+- professor/admin users can update delivery review status and advisor comments
+- Git panel supports multiple repositories and opens repository URLs
+- AI panel generates local data-based report drafts, allows manual editing, and stores report history
 
 ### Insights
 
@@ -157,10 +163,16 @@ Current operations:
 - read all projects
 - get project by id
 - create project
+- create task
+- update task
+- delete task
 - move task between Kanban columns
-- set last AI report summary
+- add delivery
+- review delivery
+- add/update/delete repository
+- generate/update AI report
 
-State is initialized from `src/data/seedProjects.ts` and stored in component memory.
+State is scoped to the signed-in user. `ProjectsContext` restores the current user's project list from AsyncStorage, seeds only known demo/test accounts, creates an empty project list for new accounts, and persists local mutations back to that user's record.
 
 ### Seed Data
 
@@ -196,18 +208,23 @@ Files:
 - `jest.config.js`
 - `jest.setup.ts`
 - `src/context/__tests__/AuthContext.test.tsx`
+- `src/context/__tests__/ProjectsContext.test.tsx`
 
 The project now has a Jest environment using `jest-expo` and React Native Testing Library.
 
-Current test coverage focuses on the authentication feature:
+Current test coverage focuses on local auth and project-state behavior:
 
 - initial unauthenticated state
-- local demo user seeding
+- local demo/test user seeding
 - login with cached demo user
 - invalid credential rejection
 - local user registration
 - cached session restore
 - logout and session removal
+- per-user project database seeding
+- newly registered accounts starting with zero projects
+- project isolation between user accounts
+- project/task/delivery/repository/report context mutations
 
 ## Not Implemented Yet
 
@@ -220,15 +237,10 @@ The following items are described in the spec but are not implemented in the app
 - backend API
 - database persistence
 - file upload/storage
-- delivery submission
-- delivery review workflow
-- delivery approval/rejection
-- task creation/edit/delete
+- full task editing forms
 - task comments
 - project comments
 - member role management
-- multiple Git repositories per project
-- Git URL validation
 - real AI model integration
 - PDF/DOCX export
 - notifications
