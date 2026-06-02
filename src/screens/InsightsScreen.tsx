@@ -1,5 +1,5 @@
 import React from 'react';
-import { FlatList, StyleSheet, View } from 'react-native';
+import { FlatList, Platform, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '../components/Card';
@@ -13,27 +13,38 @@ import { useAppNavigation } from '../navigation/useAppNavigation';
 
 export function InsightsScreen() {
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && width > 768;
   const navigation = useAppNavigation();
   const { projects } = useProjects();
 
   const withReports = projects.filter((p) => p.reports.length > 0 || (p.lastReportSummary?.length ?? 0) > 0);
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top + spacing.md }]}>
-      <View style={styles.header}>
+    <View style={[styles.root, { paddingTop: insets.top + (isDesktop ? spacing.xxxl : spacing.md) }]}>
+      <View style={[styles.header, isDesktop && styles.desktopHeader]}>
+        <AppText weight="medium" style={styles.eyebrow}>
+          Inteligencia
+        </AppText>
         <AppText weight="bold" style={textStyles.title}>
           Relatorios com IA
         </AppText>
         <AppText weight="regular" style={styles.subtitle}>
-          Historico local de sinteses geradas a partir de tarefas, entregas e repositorios.
+          Sinteses prontas para orientacao, acompanhamento e fechamento de ciclos.
         </AppText>
       </View>
 
       <FlatList
+        key={isDesktop ? 'insights-grid' : 'insights-list'}
+        numColumns={isDesktop ? 2 : 1}
+        columnWrapperStyle={isDesktop ? { gap: spacing.md, paddingHorizontal: spacing.xs } : undefined}
         data={withReports.length ? withReports : projects}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ paddingHorizontal: spacing.xl, paddingBottom: insets.bottom + spacing.xxxl }}
-        ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
+        contentContainerStyle={[
+          { paddingHorizontal: spacing.xl, paddingBottom: insets.bottom + spacing.xxxl, gap: isDesktop ? spacing.md : undefined },
+          isDesktop && { maxWidth: 1200, width: '100%', alignSelf: 'center' },
+        ]}
+        ItemSeparatorComponent={isDesktop ? null : () => <View style={{ height: spacing.md }} />}
         ListEmptyComponent={
           <Card>
             <AppText weight="semibold" style={styles.emptyTitle}>
@@ -45,11 +56,13 @@ export function InsightsScreen() {
           </Card>
         }
         renderItem={({ item }) => (
-          <InsightCard
-            project={item}
-            placeholder={!item.reports.length && !item.lastReportSummary}
-            onOpen={() => navigation.navigate('ProjectDetail', { projectId: item.id })}
-          />
+          <View style={isDesktop ? { flex: 1, padding: spacing.xs } : undefined}>
+            <InsightCard
+              project={item}
+              placeholder={!item.reports.length && !item.lastReportSummary}
+              onOpen={() => navigation.navigate('ProjectDetail', { projectId: item.id })}
+            />
+          </View>
         )}
       />
     </View>
@@ -68,6 +81,7 @@ function InsightCard({
   const latest = project.reports[0];
 
   return (
+    <Pressable onPress={onOpen} style={({ pressed }) => [pressed && styles.cardPressed, { flex: 1 }]}>
     <Card style={styles.card}>
       <View style={styles.cardTop}>
         <View style={styles.iconWrap}>
@@ -91,18 +105,21 @@ function InsightCard({
         </AppText>
       </View>
 
-      <AppText weight="semibold" style={styles.link} onPress={onOpen}>
+      <AppText weight="semibold" style={styles.link}>
         Abrir workspace do projeto {'->'}
       </AppText>
     </Card>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surface },
   header: { paddingHorizontal: spacing.xl, marginBottom: spacing.lg },
+  desktopHeader: { maxWidth: 1200, width: '100%', alignSelf: 'center' },
+  eyebrow: { color: colors.primary, fontSize: 13, marginBottom: spacing.xs },
   subtitle: { fontSize: 14, color: colors.textSecondary, marginTop: spacing.sm, lineHeight: 20 },
-  card: { padding: spacing.xl },
+  card: { padding: spacing.xl, height: '100%' },
   cardTop: { flexDirection: 'row', gap: spacing.md, alignItems: 'flex-start' },
   iconWrap: {
     width: 40,
@@ -124,6 +141,7 @@ const styles = StyleSheet.create({
   },
   quoteText: { fontSize: 14, color: colors.textSecondary, lineHeight: 21 },
   link: { marginTop: spacing.lg, color: colors.primary, fontSize: 14 },
+  cardPressed: { opacity: 0.94, transform: [{ scale: 0.995 }] },
   emptyTitle: { fontSize: 16, color: colors.text },
   emptyBody: { fontSize: 14, color: colors.textSecondary, marginTop: spacing.sm, lineHeight: 20 },
 });

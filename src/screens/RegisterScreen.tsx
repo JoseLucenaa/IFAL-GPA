@@ -7,7 +7,9 @@ import {
   StyleSheet,
   TextInput,
   View,
+  useWindowDimensions,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from '../components/AppText';
@@ -30,6 +32,8 @@ const roles: UserRole[] = [
 
 export function RegisterScreen({ navigation }: RootStackScreenProps<'Register'>) {
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && width > 768;
   const { register } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -64,99 +68,117 @@ export function RegisterScreen({ navigation }: RootStackScreenProps<'Register'>)
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.root}
-      behavior={Platform.select({ ios: 'padding', android: undefined })}
-    >
-      <ScrollView
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={[
-          styles.body,
-          { paddingTop: insets.top + spacing.xl, paddingBottom: insets.bottom + spacing.xxxl },
-        ]}
+    <View style={isDesktop ? styles.desktopRoot : styles.root}>
+      {isDesktop && (
+        <LinearGradient
+          colors={[colors.primaryDark, colors.primary, colors.primaryLight]}
+          style={styles.desktopHero}
+        >
+          <AppText weight="medium" style={styles.heroBadge}>
+            Junte-se à Plataforma
+          </AppText>
+          <AppText weight="bold" style={styles.heroTitle}>
+            Cadastre seu perfil corporativo.
+          </AppText>
+        </LinearGradient>
+      )}
+
+      <KeyboardAvoidingView
+        style={isDesktop ? styles.desktopFormContainer : { flex: 1 }}
+        behavior={Platform.select({ ios: 'padding', android: undefined })}
       >
-        <View style={styles.header}>
-          <Pressable onPress={() => navigation.goBack()} style={styles.backButton} accessibilityLabel="Voltar">
-            <Ionicons name="arrow-back" size={22} color={colors.primary} />
-          </Pressable>
-          <View style={{ flex: 1 }}>
-            <AppText weight="bold" style={textStyles.title}>
-              Criar conta
-            </AppText>
-            <AppText weight="regular" style={styles.subtitle}>
-              Cadastre seu perfil para acessar os projetos academicos.
-            </AppText>
-          </View>
-        </View>
-
-        <Card style={styles.form}>
-          <Input label="Nome" value={name} onChangeText={setName} placeholder="Seu nome completo" />
-          <Input
-            label="E-mail"
-            value={email}
-            onChangeText={setEmail}
-            placeholder="nome@ifal.edu.br"
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="email-address"
-            textContentType="emailAddress"
-          />
-          <Input
-            label="Senha"
-            value={password}
-            onChangeText={setPassword}
-            placeholder="Minimo de 6 caracteres"
-            secureTextEntry
-            textContentType="newPassword"
-          />
-
-          <View style={styles.field}>
-            <AppText weight="semibold" style={styles.label}>
-              Perfil
-            </AppText>
-            <View style={styles.roleGrid}>
-              {roles.map((item) => {
-                const selected = item === role;
-                return (
-                  <Pressable
-                    key={item}
-                    onPress={() => setRole(item)}
-                    style={[styles.roleChip, selected && styles.roleChipSelected]}
-                  >
-                    <AppText
-                      weight="semibold"
-                      style={[styles.roleChipText, selected && styles.roleChipTextSelected]}
-                    >
-                      {item}
-                    </AppText>
-                  </Pressable>
-                );
-              })}
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={isDesktop ? styles.desktopScrollForm : [
+            styles.body,
+            { paddingTop: insets.top + spacing.xl, paddingBottom: insets.bottom + spacing.xxxl },
+          ]}
+        >
+          <View style={isDesktop ? styles.formWrapper : undefined}>
+            <View style={styles.header}>
+              <Pressable onPress={() => navigation.goBack()} style={styles.backButton} accessibilityLabel="Voltar">
+                <Ionicons name="arrow-back" size={22} color={colors.primary} />
+              </Pressable>
+              <View style={{ flex: 1 }}>
+                <AppText weight="bold" style={textStyles.title}>
+                  Criar conta
+                </AppText>
+                <AppText weight="regular" style={styles.subtitle}>
+                  Cadastre seu perfil para acessar os projetos academicos.
+                </AppText>
+              </View>
             </View>
-          </View>
 
-          <Input label="Curso" value={course} onChangeText={setCourse} placeholder="Ex.: ADS" />
-          <Input
-            label="Matricula ou SIAPE"
-            value={registration}
-            onChangeText={setRegistration}
-            placeholder="Identificacao institucional"
-          />
+            <Card style={styles.form}>
+            <Input label="Nome" value={name} onChangeText={setName} placeholder="Seu nome completo" />
+            <Input
+              label="E-mail"
+              value={email}
+              onChangeText={setEmail}
+              placeholder="nome@ifal.edu.br"
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="email-address"
+              textContentType="emailAddress"
+            />
+            <Input
+              label="Senha"
+              value={password}
+              onChangeText={setPassword}
+              placeholder="Minimo de 6 caracteres"
+              secureTextEntry
+              textContentType="newPassword"
+            />
 
-          {error ? (
-            <View style={styles.errorBox}>
-              <Ionicons name="alert-circle-outline" size={18} color={colors.danger} />
-              <AppText weight="medium" style={styles.errorText}>
-                {error}
+            <View style={styles.field}>
+              <AppText weight="semibold" style={styles.label}>
+                Perfil
               </AppText>
+              <View style={styles.roleGrid}>
+                {roles.map((item) => {
+                  const selected = item === role;
+                  return (
+                    <Pressable
+                      key={item}
+                      onPress={() => setRole(item)}
+                      style={[styles.roleChip, selected && styles.roleChipSelected]}
+                    >
+                      <AppText
+                        weight="semibold"
+                        style={[styles.roleChipText, selected && styles.roleChipTextSelected]}
+                      >
+                        {item}
+                      </AppText>
+                    </Pressable>
+                  );
+                })}
+              </View>
             </View>
-          ) : null}
 
-          <PrimaryButton label="Salvar cadastro" loading={submitting} onPress={submit} />
-        </Card>
-      </ScrollView>
-    </KeyboardAvoidingView>
+            <Input label="Curso" value={course} onChangeText={setCourse} placeholder="Ex.: ADS" />
+            <Input
+              label="Matricula ou SIAPE"
+              value={registration}
+              onChangeText={setRegistration}
+              placeholder="Identificacao institucional"
+            />
+
+            {error ? (
+              <View style={styles.errorBox}>
+                <Ionicons name="alert-circle-outline" size={18} color={colors.danger} />
+                <AppText weight="medium" style={styles.errorText}>
+                  {error}
+                </AppText>
+              </View>
+            ) : null}
+
+            <PrimaryButton label="Salvar cadastro" loading={submitting} onPress={submit} />
+          </Card>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -181,6 +203,30 @@ function Input({ label, style, ...rest }: InputProps) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surface },
+  desktopRoot: { flex: 1, flexDirection: 'row', backgroundColor: colors.surface },
+  desktopHero: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xxxl * 2,
+    maxWidth: '40%',
+  },
+  heroBadge: { color: 'rgba(255,255,255,0.86)', fontSize: 13, marginBottom: spacing.sm },
+  heroTitle: { color: '#fff', fontSize: 28, lineHeight: 34, maxWidth: 330 },
+  desktopFormContainer: {
+    flex: 1,
+    backgroundColor: '#F8F9FA',
+  },
+  desktopScrollForm: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: spacing.xxxl,
+    paddingHorizontal: spacing.xl,
+  },
+  formWrapper: {
+    width: '100%',
+    maxWidth: 500,
+  },
   body: { paddingHorizontal: spacing.xl },
   header: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md, marginBottom: spacing.xl },
   backButton: {

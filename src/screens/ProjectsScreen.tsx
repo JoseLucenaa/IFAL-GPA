@@ -2,11 +2,13 @@ import React, { useMemo, useState } from 'react';
 import {
   FlatList,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   TextInput,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,27 +24,58 @@ import type { Project, ProjectKind } from '../types/project';
 import { useAppNavigation } from '../navigation/useAppNavigation';
 
 const projectKinds: ProjectKind[] = ['Projeto Integrador', 'TCC', 'Pesquisa', 'Extensao', 'Outro'];
+const filterKinds: Array<ProjectKind | 'Todos'> = ['Todos', ...projectKinds];
 
 export function ProjectsScreen() {
   const insets = useSafeAreaInsets();
-  const navigation = useAppNavigation();
-  const { projects, loading, addProject } = useProjects();
-  const [modalOpen, setModalOpen] = useState(false);
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && width > 768;
+  const numColumns = isDesktop ? 3 : 1;
 
-  const sorted = useMemo(
-    () => [...projects].sort((a, b) => a.title.localeCompare(b.title, 'pt-BR')),
-    [projects],
+  const navigation = useAppNavigation();
+  const { projects, loading, error: projectsError, addProject } = useProjects();
+  const [modalOpen, setModalOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [activeKind, setActiveKind] = useState<ProjectKind | 'Todos'>('Todos');
+
+  const filteredProjects = useMemo(
+    () =>
+      projects
+        .filter((project) => activeKind === 'Todos' || project.kind === activeKind)
+        .filter((project) => {
+          const normalized = query.trim().toLowerCase();
+          if (!normalized) return true;
+
+          return [project.title, project.subtitle, project.course, project.semester, project.kind]
+            .filter(Boolean)
+            .some((value) => value?.toLowerCase().includes(normalized));
+        })
+        .sort((a, b) => a.title.localeCompare(b.title, 'pt-BR')),
+    [activeKind, projects, query],
+  );
+
+  const overdueCount = projects.reduce(
+    (acc, project) =>
+      acc + project.tasks.filter((task) => task.dueDate && new Date(task.dueDate) < new Date() && task.column !== 'done').length,
+    0,
+  );
+  const reviewCount = projects.reduce(
+    (acc, project) => acc + project.deliveries.filter((delivery) => delivery.status === 'Enviada' || delivery.status === 'Em analise').length,
+    0,
   );
 
   return (
     <View style={[styles.root, { paddingTop: insets.top + spacing.md }]}>
-      <View style={styles.header}>
-        <View>
+      <View style={[styles.header, isDesktop && styles.desktopHeader]}>
+        <View style={styles.headerCopy}>
+          <AppText weight="medium" style={styles.eyebrow}>
+            Workspace
+          </AppText>
           <AppText weight="bold" style={textStyles.title}>
             Projetos
           </AppText>
           <AppText weight="regular" style={styles.subtitle}>
-            Projetos persistidos no dispositivo, com equipe, prazos e repositorios.
+            Encontre rapidamente projetos por tipo, prazo, equipe ou repositorio.
           </AppText>
         </View>
         <Pressable
@@ -54,7 +87,54 @@ export function ProjectsScreen() {
         </Pressable>
       </View>
 
-      {loading ? (
+      <View style={[styles.toolbar, isDesktop && styles.desktopToolbar]}>
+        <View style={styles.searchBox}>
+          <Ionicons name="search" size={18} color={colors.textMuted} />
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Buscar projeto, curso ou semestre"
+            placeholderTextColor={colors.textMuted}
+            style={styles.searchInput}
+          />
+          {query ? (
+            <Pressable onPress={() => setQuery('')} hitSlop={8}>
+              <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+            </Pressable>
+          ) : null}
+        </View>
+
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+          {filterKinds.map((kind) => {
+            const selected = activeKind === kind;
+            return (
+              <Pressable
+                key={kind}
+                onPress={() => setActiveKind(kind)}
+                style={[styles.filterChip, selected && styles.filterChipSelected]}
+              >
+                <AppText weight="semibold" style={[styles.filterChipText, selected && styles.filterChipTextSelected]}>
+                  {kind}
+                </AppText>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </View>
+
+      <View style={[styles.summaryGrid, isDesktop && styles.desktopSummaryGrid]}>
+        <SummaryStat label="Projetos" value={String(projects.length)} icon="folder-outline" />
+        <SummaryStat label="Atrasos" value={String(overdueCount)} icon="alert-circle-outline" danger={overdueCount > 0} />
+        <SummaryStat label="Em revisao" value={String(reviewCount)} icon="document-text-outline" />
+      </View>
+
+      {projectsError ? (
+        <View style={styles.loadingWrap}>
+          <AppText weight="medium" style={styles.errorText}>
+            {projectsError}
+          </AppText>
+        </View>
+      ) : loading ? (
         <View style={styles.loadingWrap}>
           <AppText weight="medium" style={styles.subtitle}>
             Carregando projetos...
@@ -62,31 +142,43 @@ export function ProjectsScreen() {
         </View>
       ) : (
         <FlatList
-          data={sorted}
+          key={isDesktop ? 'desktop-grid' : 'mobile-list'}
+          numColumns={numColumns}
+          columnWrapperStyle={isDesktop ? { gap: spacing.md, paddingHorizontal: spacing.xs } : undefined}
+          data={filteredProjects}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingBottom: insets.bottom + spacing.xxxl, paddingHorizontal: spacing.xl }}
-          ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
+          contentContainerStyle={[
+            { paddingBottom: insets.bottom + spacing.xxxl, paddingTop: spacing.lg, paddingHorizontal: spacing.xl, gap: isDesktop ? spacing.md : undefined },
+            isDesktop && { maxWidth: 1200, width: '100%', alignSelf: 'center' }
+          ]}
+          ItemSeparatorComponent={isDesktop ? null : () => <View style={{ height: spacing.md }} />}
           renderItem={({ item }) => (
-            <Pressable
-              onPress={() => navigation.navigate('ProjectDetail', { projectId: item.id })}
-              style={({ pressed }) => [pressed && styles.itemPressed]}
-            >
-              <ProjectRow project={item} />
-            </Pressable>
+            <View style={isDesktop ? { flex: 1, padding: spacing.xs } : undefined}>
+              <Pressable
+                onPress={() => navigation.navigate('ProjectDetail', { projectId: item.id })}
+                style={({ pressed }) => [pressed && styles.itemPressed, { flex: 1 }]}
+              >
+                <ProjectRow project={item} isDesktop={isDesktop} />
+              </Pressable>
+            </View>
           )}
           ListEmptyComponent={
             <Card>
               <AppText weight="semibold" style={styles.emptyTitle}>
-                Comece pelo primeiro projeto
+                {projects.length ? 'Nenhum projeto encontrado' : 'Comece pelo primeiro projeto'}
               </AppText>
               <AppText weight="regular" style={styles.emptyBody}>
-                Organize entregas longas, versoes e repositorios em um so lugar.
+                {projects.length
+                  ? 'Ajuste a busca ou selecione outro tipo para ampliar os resultados.'
+                  : 'Organize entregas longas, versoes e repositorios em um so lugar.'}
               </AppText>
-              <PrimaryButton
-                label="Criar projeto"
-                onPress={() => setModalOpen(true)}
-                style={{ marginTop: spacing.lg }}
-              />
+              {!projects.length ? (
+                <PrimaryButton
+                  label="Criar projeto"
+                  onPress={() => setModalOpen(true)}
+                  style={{ marginTop: spacing.lg }}
+                />
+              ) : null}
             </Card>
           }
         />
@@ -95,8 +187,8 @@ export function ProjectsScreen() {
       <NewProjectModal
         visible={modalOpen}
         onClose={() => setModalOpen(false)}
-        onCreate={(payload) => {
-          const projectId = addProject(payload);
+        onCreate={async (payload) => {
+          const projectId = await addProject(payload);
           setModalOpen(false);
           navigation.navigate('ProjectDetail', { projectId });
         }}
@@ -105,14 +197,15 @@ export function ProjectsScreen() {
   );
 }
 
-function ProjectRow({ project }: { project: Project }) {
+function ProjectRow({ project, isDesktop }: { project: Project; isDesktop?: boolean }) {
   const overdue = project.tasks.filter((t) => t.dueDate && new Date(t.dueDate) < new Date() && t.column !== 'done').length;
   const pendingReview = project.deliveries.filter((d) => d.status === 'Enviada' || d.status === 'Em analise').length;
+  const completedTasks = project.tasks.filter((task) => task.column === 'done').length;
 
   return (
-    <Card style={styles.rowCard}>
+    <Card style={[styles.rowCard, isDesktop && { height: '100%' }]}>
       <View style={styles.rowTop}>
-        <View style={styles.kindPill}>
+        <View style={[styles.kindPill, overdue > 0 && styles.kindPillDanger]}>
           <AppText weight="semibold" style={styles.kindPillText}>
             {project.kind}
           </AppText>
@@ -125,6 +218,10 @@ function ProjectRow({ project }: { project: Project }) {
       <AppText weight="regular" style={styles.rowSubtitle} numberOfLines={2}>
         {project.subtitle}
       </AppText>
+      <View style={styles.statusRow}>
+        <StatusChip icon="checkbox-outline" label={`${completedTasks}/${project.tasks.length} tarefas`} />
+        <StatusChip icon="document-text-outline" label={`${project.deliveries.length} entregas`} />
+      </View>
       <View style={{ marginTop: spacing.md }}>
         <View style={styles.progressLabels}>
           <AppText weight="medium" style={styles.progressLabel}>
@@ -170,6 +267,45 @@ function ProjectRow({ project }: { project: Project }) {
   );
 }
 
+function SummaryStat({
+  label,
+  value,
+  icon,
+  danger,
+}: {
+  label: string;
+  value: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  danger?: boolean;
+}) {
+  return (
+    <Card style={styles.summaryCard}>
+      <View style={[styles.summaryIcon, danger && styles.summaryIconDanger]}>
+        <Ionicons name={icon} size={18} color={danger ? colors.danger : colors.primary} />
+      </View>
+      <View>
+        <AppText weight="bold" style={styles.summaryValue}>
+          {value}
+        </AppText>
+        <AppText weight="medium" style={styles.summaryLabel}>
+          {label}
+        </AppText>
+      </View>
+    </Card>
+  );
+}
+
+function StatusChip({ icon, label }: { icon: keyof typeof Ionicons.glyphMap; label: string }) {
+  return (
+    <View style={styles.statusChip}>
+      <Ionicons name={icon} size={14} color={colors.textMuted} />
+      <AppText weight="semibold" style={styles.statusChipText}>
+        {label}
+      </AppText>
+    </View>
+  );
+}
+
 function NewProjectModal({
   visible,
   onClose,
@@ -187,7 +323,7 @@ function NewProjectModal({
     deadlineDate?: string;
     repositoryUrl?: string;
     memberNames: string[];
-  }) => void;
+  }) => Promise<void>;
 }) {
   const insets = useSafeAreaInsets();
   const [title, setTitle] = useState('');
@@ -200,6 +336,7 @@ function NewProjectModal({
   const [repositoryUrl, setRepositoryUrl] = useState('');
   const [members, setMembers] = useState('');
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const reset = () => {
     setTitle('');
@@ -275,7 +412,8 @@ function NewProjectModal({
 
             <PrimaryButton
               label="Salvar projeto"
-              onPress={() => {
+              loading={submitting}
+              onPress={async () => {
                 if (!title.trim()) {
                   setError('Informe o titulo do projeto.');
                   return;
@@ -284,18 +422,26 @@ function NewProjectModal({
                   setError('Use uma URL iniciada por http:// ou https://.');
                   return;
                 }
-                onCreate({
-                  title,
-                  subtitle,
-                  kind,
-                  course,
-                  semester,
-                  deadlineLabel: deadlineLabel || 'A definir',
-                  deadlineDate,
-                  repositoryUrl,
-                  memberNames: members.split(',').map((s) => s.trim()).filter(Boolean),
-                });
-                reset();
+                setSubmitting(true);
+                setError('');
+                try {
+                  await onCreate({
+                    title,
+                    subtitle,
+                    kind,
+                    course,
+                    semester,
+                    deadlineLabel: deadlineLabel || 'A definir',
+                    deadlineDate,
+                    repositoryUrl,
+                    memberNames: members.split(',').map((s) => s.trim()).filter(Boolean),
+                  });
+                  reset();
+                } catch (err) {
+                  setError(err instanceof Error ? err.message : 'Nao foi possivel criar o projeto.');
+                } finally {
+                  setSubmitting(false);
+                }
               }}
             />
             <PrimaryButton label="Cancelar" variant="ghost" onPress={onClose} style={{ marginTop: spacing.sm }} />
@@ -336,7 +482,95 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginBottom: spacing.md,
   },
-  subtitle: { fontSize: 14, color: colors.textSecondary, marginTop: spacing.xs, maxWidth: '78%' },
+  desktopHeader: {
+    paddingHorizontal: spacing.xl,
+    maxWidth: 1200,
+    alignSelf: 'center',
+    width: '100%',
+    marginTop: spacing.lg,
+  },
+  headerCopy: { flex: 1, minWidth: 0 },
+  eyebrow: { color: colors.primary, fontSize: 13, marginBottom: spacing.xs },
+  subtitle: { fontSize: 14, color: colors.textSecondary, marginTop: spacing.xs, maxWidth: 620, lineHeight: 20 },
+  toolbar: {
+    paddingHorizontal: spacing.xl,
+    gap: spacing.md,
+    marginBottom: spacing.md,
+  },
+  desktopToolbar: {
+    maxWidth: 1200,
+    width: '100%',
+    alignSelf: 'center',
+  },
+  searchBox: {
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceElevated,
+  },
+  searchInput: {
+    flex: 1,
+    minWidth: 0,
+    fontFamily: fontFamily.regular,
+    color: colors.text,
+    fontSize: 15,
+    paddingVertical: spacing.md,
+    outlineStyle: 'none' as never,
+  },
+  filterRow: {
+    gap: spacing.sm,
+    paddingRight: spacing.xl,
+  },
+  filterChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceElevated,
+  },
+  filterChipSelected: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryMuted,
+  },
+  filterChipText: { color: colors.textSecondary, fontSize: 13 },
+  filterChipTextSelected: { color: colors.primary },
+  summaryGrid: {
+    paddingHorizontal: spacing.xl,
+    flexDirection: 'row',
+    gap: spacing.md,
+    flexWrap: 'wrap',
+  },
+  desktopSummaryGrid: {
+    maxWidth: 1200,
+    width: '100%',
+    alignSelf: 'center',
+  },
+  summaryCard: {
+    minWidth: 150,
+    flexGrow: 1,
+    flexBasis: 0,
+    padding: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  summaryIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.md,
+    backgroundColor: colors.primaryMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  summaryIconDanger: { backgroundColor: '#FEF3F2' },
+  summaryValue: { color: colors.text, fontSize: 20 },
+  summaryLabel: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
   loadingWrap: { paddingHorizontal: spacing.xl, paddingTop: spacing.xl },
   fab: {
     width: 48,
@@ -360,9 +594,23 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
     borderRadius: radius.full,
   },
+  kindPillDanger: { backgroundColor: '#FEF3F2' },
   kindPillText: { color: colors.primary, fontSize: 12 },
   rowTitle: { fontSize: 17, marginTop: spacing.md, color: colors.text },
   rowSubtitle: { fontSize: 14, color: colors.textSecondary, marginTop: spacing.xs },
+  statusRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.md },
+  statusChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.full,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  statusChipText: { color: colors.textSecondary, fontSize: 11 },
   progressLabels: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.sm },
   progressLabel: { fontSize: 12, color: colors.textMuted },
   progressValue: { fontSize: 12, color: colors.primary },

@@ -1,7 +1,8 @@
-import React, { useLayoutEffect, useMemo, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import {
   Linking,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -110,6 +111,13 @@ export function ProjectDetailScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
+        {projects.error ? (
+          <Card style={{ marginBottom: spacing.md }}>
+            <AppText weight="semibold" style={styles.errorText}>
+              {projects.error}
+            </AppText>
+          </Card>
+        ) : null}
         {tab === 'overview' ? <Overview project={project} /> : null}
         {tab === 'kanban' ? (
           <KanbanBoard
@@ -142,13 +150,13 @@ export function ProjectDetailScreen() {
             reportType={reportType}
             onTypeChange={setReportType}
             onDraftChange={setReportDraft}
-            onGenerate={() => {
-              const generated = projects.generateReport(project.id, reportType, user?.name ?? 'Usuario local');
+            onGenerate={async () => {
+              const generated = await projects.generateReport(project.id, reportType, user?.name ?? 'Usuario');
               setReportDraft(generated.content);
             }}
-            onSave={() => {
+            onSave={async () => {
               const latest = project.reports[0];
-              if (latest) projects.updateReport(project.id, latest.id, reportDraft);
+              if (latest) await projects.updateReport(project.id, latest.id, reportDraft);
             }}
           />
         ) : null}
@@ -159,7 +167,7 @@ export function ProjectDetailScreen() {
         members={project.members}
         onClose={() => setTaskModalOpen(false)}
         onSave={(input) => {
-          projects.addTask(project.id, input);
+          void projects.addTask(project.id, input);
           setTaskModalOpen(false);
         }}
       />
@@ -168,7 +176,7 @@ export function ProjectDetailScreen() {
         userName={user?.name ?? 'Usuario local'}
         onClose={() => setDeliveryModalOpen(false)}
         onSave={(input) => {
-          projects.addDelivery(project.id, input);
+          void projects.addDelivery(project.id, input);
           setDeliveryModalOpen(false);
         }}
       />
@@ -176,7 +184,7 @@ export function ProjectDetailScreen() {
         visible={repositoryModalOpen}
         onClose={() => setRepositoryModalOpen(false)}
         onSave={(input) => {
-          projects.addRepository(project.id, input);
+          void projects.addRepository(project.id, input);
           setRepositoryModalOpen(false);
         }}
       />
@@ -277,18 +285,88 @@ function KanbanBoard({
   onMove: (taskId: string, col: KanbanColumn) => void;
   onDelete: (taskId: string) => void;
 }) {
+  const isWeb = Platform.OS === 'web';
+  const [draggedTask, setDraggedTask] = useState<{ id: string; column: KanbanColumn } | null>(null);
+  const [dropTarget, setDropTarget] = useState<KanbanColumn | null>(null);
+
   const grouped = useMemo(() => {
     const map: Record<KanbanColumn, Task[]> = { todo: [], doing: [], review: [], done: [] };
     for (const t of project.tasks) map[t.column].push(t);
     return map;
   }, [project.tasks]);
 
+  useEffect(() => {
+    if (!isWeb || !draggedTask || typeof document === 'undefined') return;
+
+    const findColumn = (event: MouseEvent): KanbanColumn | null => {
+      const element = document.elementFromPoint(event.clientX, event.clientY);
+      const column = element?.closest('[data-kanban-column]') as HTMLElement | null;
+      const value = column?.dataset.kanbanColumn;
+      return columnMeta.some((item) => item.key === value) ? (value as KanbanColumn) : null;
+    };
+
+    const handleMouseMove = (event: MouseEvent) => {
+      setDropTarget(findColumn(event));
+    };
+
+    const handleMouseUp = (event: MouseEvent) => {
+      const targetColumn = findColumn(event);
+      if (targetColumn && targetColumn !== draggedTask.column) {
+        onMove(draggedTask.id, targetColumn);
+      }
+      setDraggedTask(null);
+      setDropTarget(null);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp, { once: true });
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [draggedTask, isWeb, onMove]);
+
+  const taskMouseProps = (task: Task): Record<string, unknown> => {
+    if (!isWeb) return {};
+
+    return {
+      onMouseDown: (event: MouseEvent) => {
+        if (event.button !== 0) return;
+        event.preventDefault();
+        setDraggedTask({ id: task.id, column: task.column });
+        setDropTarget(task.column);
+      },
+    };
+  };
+
+  const columnDataProps = (column: KanbanColumn): Record<string, unknown> => {
+    if (!isWeb) return {};
+    return { dataSet: { kanbanColumn: column } };
+  };
+
   return (
     <View style={{ gap: spacing.md }}>
       <PrimaryButton label="Nova tarefa" onPress={onAdd} icon={<Ionicons name="add-circle-outline" size={18} color="#fff" />} />
+      {isWeb ? (
+        <View style={styles.dragHint}>
+          <Ionicons name="hand-left-outline" size={16} color={colors.primary} />
+          <AppText weight="medium" style={styles.dragHintText}>
+            Segure e arraste uma tarefa para outra coluna para mudar seu status.
+          </AppText>
+        </View>
+      ) : null}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.kanbanRow}>
         {columnMeta.map((col) => (
-          <View key={col.key} style={[styles.column, { backgroundColor: col.tint }]}>
+          <View
+            key={col.key}
+            {...columnDataProps(col.key)}
+            style={[
+              styles.column,
+              { backgroundColor: col.tint },
+              dropTarget === col.key && styles.columnDropTarget,
+            ]}
+          >
             <View style={styles.columnHeader}>
               <AppText weight="bold" style={styles.columnTitle}>
                 {col.title}
@@ -301,7 +379,15 @@ function KanbanBoard({
             </View>
             <View style={{ gap: spacing.sm }}>
               {grouped[col.key].map((task) => (
-                <View key={task.id} style={{ gap: spacing.xs }}>
+                <View
+                  key={task.id}
+                  {...taskMouseProps(task)}
+                  style={[
+                    { gap: spacing.xs },
+                    isWeb && styles.draggableTask,
+                    draggedTask?.id === task.id && styles.draggingTask,
+                  ]}
+                >
                   <TaskCard task={task} onAdvance={onAdvance} />
                   <View style={styles.taskActions}>
                     {columnMeta.map((target) => (
@@ -819,6 +905,33 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   countText: { fontSize: 12, color: colors.textSecondary },
+  dragHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    backgroundColor: colors.primaryMuted,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  dragHintText: { color: colors.primaryDark, fontSize: 12 },
+  columnDropTarget: {
+    borderColor: colors.primary,
+    borderWidth: 2,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
+  },
+  draggableTask: {
+    cursor: 'grab',
+  } as never,
+  draggingTask: {
+    opacity: 0.56,
+    transform: [{ scale: 0.98 }],
+  },
   taskActions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   actionChip: {
     paddingHorizontal: spacing.sm,

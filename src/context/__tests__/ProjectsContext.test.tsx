@@ -135,7 +135,7 @@ describe('ProjectsContext', () => {
 
     let projectId = '';
     await act(async () => {
-      projectId = getProjects().addProject({
+      projectId = await getProjects().addProject({
         title: 'Projeto privado',
         subtitle: 'Somente desta conta',
         kind: 'Projeto Integrador',
@@ -167,7 +167,7 @@ describe('ProjectsContext', () => {
 
     let projectId = '';
     await act(async () => {
-      projectId = getProjects().addProject({
+      projectId = await getProjects().addProject({
         title: 'Novo PI',
         subtitle: 'Projeto de teste',
         kind: 'Projeto Integrador',
@@ -274,7 +274,7 @@ describe('ProjectsContext', () => {
 
     let reportId = '';
     await act(async () => {
-      reportId = getProjects().generateReport(projectId, 'Resumo executivo', 'Teste').id;
+      reportId = (await getProjects().generateReport(projectId, 'Resumo executivo', 'Teste')).id;
     });
 
     expect(getProjects().getProject(projectId)?.reports[0]?.id).toBe(reportId);

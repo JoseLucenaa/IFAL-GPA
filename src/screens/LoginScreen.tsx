@@ -7,6 +7,7 @@ import {
   StyleSheet,
   TextInput,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,6 +23,8 @@ import type { RootStackScreenProps } from '../navigation/types';
 
 export function LoginScreen({ navigation }: RootStackScreenProps<'Login'>) {
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && width > 768;
   const { login } = useAuth();
   const [email, setEmail] = useState('ana@ifal.edu.br');
   const [password, setPassword] = useState('123456');
@@ -47,15 +50,12 @@ export function LoginScreen({ navigation }: RootStackScreenProps<'Login'>) {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.root}
-      behavior={Platform.select({ ios: 'padding', android: undefined })}
-    >
+    <View style={isDesktop ? styles.desktopRoot : styles.root}>
       <LinearGradient
         colors={[colors.primaryDark, colors.primary, colors.primaryLight]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={[styles.hero, { paddingTop: insets.top + spacing.xxl }]}
+        style={isDesktop ? styles.desktopHero : [styles.hero, { paddingTop: insets.top + spacing.xxl }]}
       >
         <AppText weight="medium" style={styles.badge}>
           IFAL Projetos
@@ -65,60 +65,67 @@ export function LoginScreen({ navigation }: RootStackScreenProps<'Login'>) {
         </AppText>
       </LinearGradient>
 
-      <ScrollView
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.body, { paddingBottom: insets.bottom + spacing.xxxl }]}
+      <KeyboardAvoidingView
+        style={isDesktop ? styles.desktopFormContainer : { flex: 1 }}
+        behavior={Platform.select({ ios: 'padding', android: undefined })}
       >
-        <Card style={styles.form}>
-          <Input
-            label="E-mail"
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="email-address"
-            textContentType="emailAddress"
-            placeholder="nome@ifal.edu.br"
-          />
-          <Input
-            label="Senha"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            textContentType="password"
-            placeholder="Sua senha"
-          />
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={isDesktop ? styles.desktopScrollForm : [styles.body, { paddingBottom: insets.bottom + spacing.xxxl }]}
+        >
+          <View style={isDesktop ? styles.formWrapper : undefined}>
+            <Card style={styles.form}>
+              <Input
+                label="E-mail"
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="email-address"
+                textContentType="emailAddress"
+                placeholder="nome@ifal.edu.br"
+              />
+              <Input
+                label="Senha"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                textContentType="password"
+                placeholder="Sua senha"
+              />
 
-          {error ? (
-            <View style={styles.errorBox}>
-              <Ionicons name="alert-circle-outline" size={18} color={colors.danger} />
-              <AppText weight="medium" style={styles.errorText}>
-                {error}
+              {error ? (
+                <View style={styles.errorBox}>
+                  <Ionicons name="alert-circle-outline" size={18} color={colors.danger} />
+                  <AppText weight="medium" style={styles.errorText}>
+                    {error}
+                  </AppText>
+                </View>
+              ) : null}
+
+              <PrimaryButton label="Entrar" loading={submitting} onPress={submit} />
+              <PrimaryButton
+                label="Criar conta"
+                variant="outline"
+                onPress={() => navigation.navigate('Register')}
+                style={{ marginTop: spacing.sm }}
+              />
+
+              <AppText weight="regular" style={styles.demoHint}>
+                Conta demo: ana@ifal.edu.br / 123456
               </AppText>
-            </View>
-          ) : null}
+            </Card>
 
-          <PrimaryButton label="Entrar" loading={submitting} onPress={submit} />
-          <PrimaryButton
-            label="Criar conta"
-            variant="outline"
-            onPress={() => navigation.navigate('Register')}
-            style={{ marginTop: spacing.sm }}
-          />
-
-          <AppText weight="regular" style={styles.demoHint}>
-            Conta demo: ana@ifal.edu.br / 123456
-          </AppText>
-        </Card>
-
-        <Pressable onPress={() => navigation.navigate('Register')} style={styles.footerLink}>
-          <AppText weight="semibold" style={styles.footerLinkText}>
-            Novo no app? Cadastre-se
-          </AppText>
-        </Pressable>
-      </ScrollView>
-    </KeyboardAvoidingView>
+            <Pressable onPress={() => navigation.navigate('Register')} style={styles.footerLink}>
+              <AppText weight="semibold" style={styles.footerLinkText}>
+                Novo no app? Cadastre-se
+              </AppText>
+            </Pressable>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -148,6 +155,29 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxxl,
     borderBottomLeftRadius: radius.xl,
     borderBottomRightRadius: radius.xl,
+  },
+  desktopRoot: { flex: 1, flexDirection: 'row', backgroundColor: colors.surface },
+  desktopHero: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xxxl * 2,
+    borderBottomRightRadius: 0,
+    borderBottomLeftRadius: 0,
+  },
+  desktopFormContainer: {
+    flex: 1,
+    backgroundColor: '#F8F9FA',
+  },
+  desktopScrollForm: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: spacing.xxxl,
+    paddingHorizontal: spacing.xl,
+  },
+  formWrapper: {
+    width: '100%',
+    maxWidth: 400,
   },
   badge: { color: 'rgba(255,255,255,0.86)', fontSize: 13, marginBottom: spacing.sm },
   title: { color: '#fff', fontSize: 28, lineHeight: 34, maxWidth: 330 },

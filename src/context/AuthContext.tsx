@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, {
   createContext,
   useCallback,
@@ -7,14 +6,8 @@ import React, {
   useMemo,
   useState,
 } from 'react';
+import { isSupabaseConfigured, supabase } from '../lib/supabase';
 import type { User, UserRole } from '../types/auth';
-
-const SESSION_KEY = '@ifal-gpa/auth/session';
-const USERS_KEY = '@ifal-gpa/auth/users';
-
-type StoredUser = User & {
-  password: string;
-};
 
 interface AuthContextValue {
   user: User | null;
@@ -31,74 +24,72 @@ interface AuthContextValue {
   logout: () => Promise<void>;
 }
 
+type ProfileRow = {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  course: string | null;
+  registration: string | null;
+  created_at: string;
+};
+
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-const seedUsers: StoredUser[] = [
-  {
-    id: 'u_test_student',
-    name: 'Teste Estudante',
-    email: 'student@test.ifal.edu.br',
-    password: '123456',
-    role: 'Estudante',
-    course: 'Analise e Desenvolvimento de Sistemas',
-    registration: '20269901',
-    createdAt: '2026-05-25T00:00:00.000Z',
-  },
-  {
-    id: 'u_test_professor',
-    name: 'Teste Professor',
-    email: 'professor@test.ifal.edu.br',
-    password: '123456',
-    role: 'Professor orientador',
-    course: 'Analise e Desenvolvimento de Sistemas',
-    registration: 'SIAPE-9991',
-    createdAt: '2026-05-25T00:00:00.000Z',
-  },
-  {
-    id: 'u_demo_student',
-    name: 'Ana Souza',
-    email: 'ana@ifal.edu.br',
-    password: '123456',
-    role: 'Estudante',
-    course: 'Analise e Desenvolvimento de Sistemas',
-    registration: '20260001',
-    createdAt: '2026-05-11T00:00:00.000Z',
-  },
-  {
-    id: 'u_demo_advisor',
-    name: 'Profa. Helena',
-    email: 'helena@ifal.edu.br',
-    password: '123456',
-    role: 'Professor orientador',
-    course: 'Analise e Desenvolvimento de Sistemas',
-    registration: 'SIAPE-0001',
-    createdAt: '2026-05-11T00:00:00.000Z',
-  },
-];
-
-function publicUser(stored: StoredUser): User {
-  const { password: _password, ...user } = stored;
-  return user;
+function assertSupabaseConfigured() {
+  if (!isSupabaseConfigured) {
+    throw new Error('Configure EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY no arquivo .env.');
+  }
 }
 
-function makeId(): string {
-  return `u_${Math.random().toString(36).slice(2, 10)}`;
+function mapProfile(row: ProfileRow): User {
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    role: row.role,
+    course: row.course ?? undefined,
+    registration: row.registration ?? undefined,
+    createdAt: row.created_at,
+  };
 }
 
-async function readStoredUsers(): Promise<StoredUser[]> {
-  const raw = await AsyncStorage.getItem(USERS_KEY);
-  if (!raw) {
-    await AsyncStorage.setItem(USERS_KEY, JSON.stringify(seedUsers));
-    return seedUsers;
-  }
+async function fetchProfile(userId: string): Promise<User | null> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, name, email, role, course, registration, created_at')
+    .eq('id', userId)
+    .maybeSingle();
 
-  try {
-    const parsed = JSON.parse(raw) as StoredUser[];
-    if (!Array.isArray(parsed)) return seedUsers;
-    return parsed;
-  } catch {
-    return seedUsers;
-  }
+  if (error) throw error;
+  return data ? mapProfile(data as ProfileRow) : null;
+}
+
+async function upsertProfile(input: {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  course?: string;
+  registration?: string;
+}): Promise<User> {
+  const payload = {
+    id: input.id,
+    name: input.name.trim(),
+    email: input.email.trim().toLowerCase(),
+    role: input.role,
+    course: input.course?.trim() || null,
+    registration: input.registration?.trim() || null,
+  };
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .upsert(payload, { onConflict: 'id' })
+    .select('id, name, email, role, course, registration, created_at')
+    .single();
+
+  if (error) throw error;
+  return mapProfile(data as ProfileRow);
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -110,11 +101,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     async function restoreSession() {
       try {
-        await readStoredUsers();
-        const raw = await AsyncStorage.getItem(SESSION_KEY);
-        if (raw && mounted) {
-          setUser(JSON.parse(raw) as User);
+        assertSupabaseConfigured();
+        const { data, error } = await supabase.auth.getSession();
+        if (error) throw error;
+
+        const sessionUser = data.session?.user;
+        if (!sessionUser) {
+          if (mounted) setUser(null);
+          return;
         }
+
+        const profile = await fetchProfile(sessionUser.id);
+        if (mounted) setUser(profile);
       } catch {
         if (mounted) setUser(null);
       } finally {
@@ -124,30 +122,73 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     void restoreSession();
 
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return;
+
+      if (!session?.user) {
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      void fetchProfile(session.user.id)
+        .then((profile) => {
+          if (mounted) setUser(profile);
+        })
+        .catch(() => {
+          if (mounted) setUser(null);
+        })
+        .finally(() => {
+          if (mounted) setLoading(false);
+        });
+    });
+
     return () => {
       mounted = false;
+      subscription.unsubscribe();
     };
   }, []);
 
-  const persistSession = useCallback(async (nextUser: User) => {
-    setUser(nextUser);
-    await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(nextUser));
+  const login = useCallback(async (email: string, password: string) => {
+    assertSupabaseConfigured();
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: normalizedEmail,
+      password,
+    });
+
+    if (error) {
+      throw new Error('E-mail ou senha invalidos.');
+    }
+
+    if (!data.user) {
+      throw new Error('Nao foi possivel iniciar a sessao.');
+    }
+
+    let profile = await fetchProfile(data.user.id);
+    if (!profile) {
+      const metadata = data.user.user_metadata as Partial<{
+        name: string;
+        role: UserRole;
+        course: string;
+        registration: string;
+      }>;
+      profile = await upsertProfile({
+        id: data.user.id,
+        name: metadata.name ?? normalizedEmail,
+        email: data.user.email ?? normalizedEmail,
+        role: metadata.role ?? 'Estudante',
+        course: metadata.course,
+        registration: metadata.registration,
+      });
+    }
+
+    setUser(profile);
   }, []);
-
-  const login = useCallback(
-    async (email: string, password: string) => {
-      const normalizedEmail = email.trim().toLowerCase();
-      const users = await readStoredUsers();
-      const found = users.find((u) => u.email.toLowerCase() === normalizedEmail);
-
-      if (!found || found.password !== password) {
-        throw new Error('E-mail ou senha invalidos.');
-      }
-
-      await persistSession(publicUser(found));
-    },
-    [persistSession],
-  );
 
   const register = useCallback(
     async (input: {
@@ -158,35 +199,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       course?: string;
       registration?: string;
     }) => {
+      assertSupabaseConfigured();
+
       const normalizedEmail = input.email.trim().toLowerCase();
-      const users = await readStoredUsers();
-      const exists = users.some((u) => u.email.toLowerCase() === normalizedEmail);
-
-      if (exists) {
-        throw new Error('Ja existe uma conta com este e-mail.');
-      }
-
-      const stored: StoredUser = {
-        id: makeId(),
-        name: input.name.trim(),
+      const { data, error } = await supabase.auth.signUp({
         email: normalizedEmail,
         password: input.password,
-        role: input.role,
-        course: input.course?.trim() || undefined,
-        registration: input.registration?.trim() || undefined,
-        createdAt: new Date().toISOString(),
-      };
+        options: {
+          data: {
+            name: input.name.trim(),
+            role: input.role,
+            course: input.course?.trim() || undefined,
+            registration: input.registration?.trim() || undefined,
+          },
+        },
+      });
 
-      const nextUsers = [stored, ...users];
-      await AsyncStorage.setItem(USERS_KEY, JSON.stringify(nextUsers));
-      await persistSession(publicUser(stored));
+      if (error) {
+        throw new Error(error.message.includes('already') ? 'Ja existe uma conta com este e-mail.' : error.message);
+      }
+
+      if (!data.user) {
+        throw new Error('Nao foi possivel criar a conta.');
+      }
+
+      if (!data.session) {
+        throw new Error('Conta criada. Confirme seu e-mail antes de entrar.');
+      }
+
+      const profile = await upsertProfile({
+        id: data.user.id,
+        name: input.name,
+        email: normalizedEmail,
+        role: input.role,
+        course: input.course,
+        registration: input.registration,
+      });
+
+      setUser(profile);
     },
-    [persistSession],
+    [],
   );
 
   const logout = useCallback(async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
     setUser(null);
-    await AsyncStorage.removeItem(SESSION_KEY);
   }, []);
 
   const value = useMemo(
@@ -202,4 +260,3 @@ export function useAuth(): AuthContextValue {
   if (!ctx) throw new Error('useAuth deve ser usado dentro de AuthProvider');
   return ctx;
 }
-
